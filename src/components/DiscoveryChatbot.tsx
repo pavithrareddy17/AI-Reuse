@@ -5,6 +5,7 @@ import {
   ChatbotDiscoveryResult,
   ChatMessage,
   MatchedProjectResult,
+  RealisticKPIs,
 } from '../types.ts';
 import {
   Send,
@@ -45,6 +46,83 @@ export const DiscoveryChatbot: React.FC<Props> = () => {
     followUp: FollowUpQuestion;
   } | null>(null);
 
+  // User-selected active match per message (supports selecting lower matches)
+  const [selectedMatchByMsg, setSelectedMatchByMsg] = useState<Record<string, string>>({});
+
+  // Dynamic helpers for active selected match
+  const computeKPIs = (asset: any): RealisticKPIs => {
+    let manHours = 140;
+    let cost = 18000;
+    let deployDays = 3;
+    let buildWeeks = 6;
+
+    if (asset.implementationEffort?.includes('3 to 5') || asset.implementationEffort?.includes('1 to 2 weeks')) {
+      manHours = 210;
+      cost = 26500;
+      deployDays = 4;
+      buildWeeks = 8;
+    } else if (asset.implementationEffort?.includes('1 to 2 days')) {
+      manHours = 95;
+      cost = 12500;
+      deployDays = 2;
+      buildWeeks = 4;
+    } else if (asset.implementationEffort?.includes('2 to 4 days')) {
+      manHours = 160;
+      cost = 20000;
+      deployDays = 3;
+      buildWeeks = 6;
+    }
+
+    return {
+      manHoursSaved: manHours,
+      costAvoided: cost,
+      timeToDeployDays: deployDays,
+      standardBuildWeeks: buildWeeks,
+    };
+  };
+
+  const getDecisionSuggestion = (msg: ChatMessage, match: MatchedProjectResult): string => {
+    if (match.role === 'Primary Match' && msg.resultData?.decisionSuggestion) {
+      return msg.resultData.decisionSuggestion;
+    }
+    const kpis = computeKPIs(match.asset);
+    return `Selected ${match.role} [${match.asset.id} • ${match.matchPercentage}% Fit]: Adopting ${match.asset.name} from department ${match.asset.dept} (${match.asset.deptFullName}) is a viable strategy focusing on ${match.asset.domain}. ${match.fitReason} Choosing this path achieves ~${kpis.manHoursSaved} engineering hours saved and avoids $${kpis.costAvoided.toLocaleString()} in custom development costs.`;
+  };
+
+  const getWhatToReuse = (asset: any): string[] => [
+    `Pre-built ${asset.techStack} engine and data connectors maintained by department ${asset.dept} (${asset.deptFullName}).`,
+    `Certified compliance framework: ${asset.securityCompliance}.`,
+    `Standardized deployment blueprint: ${asset.deploymentPattern} (${asset.estimatedRunCost}).`,
+    `Operational lessons learned: ${asset.lessonsLearned}`,
+  ];
+
+  const getWhatToBuild = (asset: any): string[] => [
+    `Service Integration: Invoke the ${asset.id} (${asset.name}) REST endpoint using your department tenant credentials.`,
+    `Payload Schema Mapping: Transform incoming payloads into the standard ${asset.modality.split(',')[0]} specification.`,
+    `Incident & Notification Hooks: Connect operational alert channels (Teams, Slack, or email) to ${asset.dept} service events.`,
+  ];
+
+  const getRoadmap = (asset: any) => [
+    {
+      phase: 'Phase 1: Access & Setup',
+      timeline: 'Day 1',
+      title: `Provision ${asset.dept} Credentials`,
+      description: `Request project tenant keys and access permissions for ${asset.id} from department ${asset.dept}.`,
+    },
+    {
+      phase: 'Phase 2: Client Connection',
+      timeline: `Days 2–${asset.implementationEffort?.includes('1 to 2') ? '2' : '3'}`,
+      title: 'Connect Client & Map Payload',
+      description: `Integrate the ${asset.techStack.split(',')[0]} connector and validate schema payloads.`,
+    },
+    {
+      phase: 'Phase 3: Validation & Deploy',
+      timeline: `Day ${asset.implementationEffort?.includes('1 to 2') ? '3' : '4'}`,
+      title: 'Smoke Test & Release to Production',
+      description: `Execute integration tests, verify latency thresholds, and activate production telemetry.`,
+    },
+  ];
+
   // Single-line width intent tabs (Requirement 8)
   const intentRows = [
     {
@@ -77,7 +155,7 @@ export const DiscoveryChatbot: React.FC<Props> = () => {
       query: '"I need autonomous execution and decision support."',
       description: 'Monitoring events, dynamic link failover, automated tool actions, and incident alerts.',
       icon: Cpu,
-      sample: 'We need to identify network device latency spikes between IPs, automatically alert Teams and email, and execute route link failover.',
+      sample: 'Identify network device latency from source to destination IP, alert on threshold breach, notify respective on-call teams via Teams and Email, and dynamically switch to alternate link until latency drops.',
     },
   ];
 
@@ -207,6 +285,7 @@ export const DiscoveryChatbot: React.FC<Props> = () => {
     setMessages([]);
     setPendingFollowUp(null);
     setInputPrompt('');
+    setSelectedMatchByMsg({});
   };
 
   return (
@@ -217,7 +296,7 @@ export const DiscoveryChatbot: React.FC<Props> = () => {
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-xs font-semibold mb-2">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>AI Solution Discovery &amp; Decision Assistant</span>
+              <span>Enterprise Discovery &amp; Decision Assistant</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               Interactive Solution Matcher &amp; Decision Guide
@@ -395,211 +474,276 @@ export const DiscoveryChatbot: React.FC<Props> = () => {
               )}
 
               {/* Assistant Message with Final Evaluation & Multiple Matches (Requirements 1, 2, 3, 4, 6, 7) */}
-              {msg.sender === 'assistant' && msg.resultData && (
-                <div className="flex items-start gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center shrink-0 text-xs font-bold shadow-sm">
-                    <Bot className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 max-w-4xl space-y-4">
-                    {/* Executive Suggestion / Decision Card */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Architectural Decision &amp; Suggestion</span>
-                        </span>
-                      </div>
-                      <p className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
-                        {msg.resultData.decisionSuggestion}
-                      </p>
+              {msg.sender === 'assistant' && msg.resultData && (() => {
+                const activeProjectId =
+                  selectedMatchByMsg[msg.id] ||
+                  msg.resultData.matchedProjects[0]?.asset.id;
+
+                const activeMatch =
+                  msg.resultData.matchedProjects.find(
+                    (m) => m.asset.id === activeProjectId
+                  ) || msg.resultData.matchedProjects[0];
+
+                const activeAsset = activeMatch.asset;
+                const activeKPIs = computeKPIs(activeAsset);
+                const activeDecision = getDecisionSuggestion(msg, activeMatch);
+                const activeWhatToReuse = getWhatToReuse(activeAsset);
+                const activeWhatToBuild = getWhatToBuild(activeAsset);
+                const activeRoadmap = getRoadmap(activeAsset);
+
+                return (
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center shrink-0 text-xs font-bold shadow-sm">
+                      <Bot className="w-4 h-4" />
                     </div>
-
-                    {/* REALISTIC KPIS (Requirement 7: 120-220 hrs, $15-28k, 3-5 days) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            Man-Hours Saved
-                          </span>
-                          <Clock className="w-4 h-4 text-indigo-500" />
-                        </div>
-                        <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                          ~{msg.resultData.kpis.manHoursSaved} hrs
-                        </div>
-                        <div className="text-[11px] text-indigo-600 dark:text-indigo-400 mt-0.5">
-                          Bypasses {msg.resultData.kpis.standardBuildWeeks} weeks of redundant dev
-                        </div>
-                      </div>
-
-                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            Cost Avoided
-                          </span>
-                          <DollarSign className="w-4 h-4 text-emerald-500" />
-                        </div>
-                        <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                          ${msg.resultData.kpis.costAvoided.toLocaleString()}
-                        </div>
-                        <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">
-                          Redundant engineering &amp; cloud setup
-                        </div>
-                      </div>
-
-                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            Time to Deploy
-                          </span>
-                          <Rocket className="w-4 h-4 text-purple-500" />
-                        </div>
-                        <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                          {msg.resultData.kpis.timeToDeployDays} Days
-                        </div>
-                        <div className="text-[11px] text-purple-600 dark:text-purple-400 mt-0.5">
-                          vs. {msg.resultData.kpis.standardBuildWeeks} weeks custom scratch build
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* MULTIPLE MATCHES (Requirement 6: show them all with percentage and department name) */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-                      <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                        <div className="flex items-center gap-2">
-                          <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                            Matched Internal Projects ({msg.resultData.matchedProjects.length} Matches Found)
-                          </h3>
-                        </div>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                          Ranked by Architecture Fit
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        {msg.resultData.matchedProjects.map((matchItem, idx) => (
-                          <div
-                            key={matchItem.asset.id}
-                            className={`p-4 rounded-xl border transition ${
-                              idx === 0
-                                ? 'bg-indigo-50/40 dark:bg-indigo-950/20 border-indigo-500 ring-1 ring-indigo-500/20'
-                                : 'bg-slate-50/60 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800'
-                            }`}
-                          >
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-indigo-600 text-white">
-                                  {matchItem.asset.id}
-                                </span>
-                                <span className="text-xs font-bold text-slate-900 dark:text-white">
-                                  {matchItem.asset.name}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                {/* Department Badge (Requirement 4: just dept names) */}
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
-                                  <Building2 className="w-3 h-3 text-indigo-500" />
-                                  <span>Dept: {matchItem.asset.dept}</span>
-                                </span>
-
-                                {/* Match percentage badge (Requirement 6) */}
-                                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
-                                  {matchItem.matchPercentage}% Match
-                                </span>
-                              </div>
-                            </div>
-
-                            <p className="text-xs text-slate-600 dark:text-slate-300 mb-2.5">
-                              {matchItem.fitReason}
-                            </p>
-
-                            <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-200/60 dark:border-slate-800/60 pt-2">
-                              <span>Department: <strong>{matchItem.asset.deptFullName}</strong></span>
-                              <span>•</span>
-                              <span>Tech: <strong className="font-mono text-slate-700 dark:text-slate-300">{matchItem.asset.techStack}</strong></span>
-                              <span>•</span>
-                              <span>Run Cost: <strong>{matchItem.asset.estimatedRunCost}</strong></span>
-                            </div>
+                    <div className="flex-1 max-w-4xl space-y-4">
+                      {/* Executive Suggestion / Decision Card for the Active Match */}
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Architectural Decision &amp; Suggestion</span>
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* WHAT TO IMPLEMENT: What to Reuse vs What to Build (No code snippets, no pros/cons) */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                          Scope &amp; Implementation Blueprint
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          Clear distinction between pre-built department assets and your application tasks.
+                          <span className="text-[11px] font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                            Active Match: {activeMatch.asset.id} ({activeMatch.matchPercentage}% • {activeMatch.role})
+                          </span>
+                        </div>
+                        <p className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
+                          {activeDecision}
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* What to Reuse */}
-                        <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-500/20 space-y-2">
-                          <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                            <span>What You Reuse From Department</span>
+                      {/* REALISTIC KPIS */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              Man-Hours Saved
+                            </span>
+                            <Clock className="w-4 h-4 text-indigo-500" />
                           </div>
-                          <ul className="text-xs text-slate-700 dark:text-slate-300 space-y-1.5">
-                            {msg.resultData.whatToReuse.map((item, i) => (
-                              <li key={i} className="flex items-start gap-1.5">
-                                <span className="text-emerald-600 font-bold">•</span>
-                                <span>{item}</span>
-                              </li>
-                            ))}
-                          </ul>
+                          <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                            ~{activeKPIs.manHoursSaved} hrs
+                          </div>
+                          <div className="text-[11px] text-indigo-600 dark:text-indigo-400 mt-0.5">
+                            Bypasses {activeKPIs.standardBuildWeeks} weeks of redundant dev
+                          </div>
                         </div>
 
-                        {/* What to Build */}
-                        <div className="p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-500/20 space-y-2">
-                          <div className="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-indigo-600" />
-                            <span>What Your Team Implements</span>
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              Cost Avoided
+                            </span>
+                            <DollarSign className="w-4 h-4 text-emerald-500" />
                           </div>
-                          <ul className="text-xs text-slate-700 dark:text-slate-300 space-y-1.5">
-                            {msg.resultData.whatToBuild.map((item, i) => (
-                              <li key={i} className="flex items-start gap-1.5">
-                                <span className="text-indigo-600 font-bold">•</span>
-                                <span>{item}</span>
-                              </li>
-                            ))}
-                          </ul>
+                          <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                            ${activeKPIs.costAvoided.toLocaleString()}
+                          </div>
+                          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">
+                            Redundant engineering &amp; cloud setup
+                          </div>
+                        </div>
+
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              Time to Deploy
+                            </span>
+                            <Rocket className="w-4 h-4 text-purple-500" />
+                          </div>
+                          <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                            {activeKPIs.timeToDeployDays} Days
+                          </div>
+                          <div className="text-[11px] text-purple-600 dark:text-purple-400 mt-0.5">
+                            vs. {activeKPIs.standardBuildWeeks} weeks custom scratch build
+                          </div>
                         </div>
                       </div>
 
-                      {/* 3-Step Execution Roadmap */}
-                      <div className="pt-2">
-                        <div className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2.5">
-                          Game Plan:
+                      {/* MULTIPLE MATCHES - Interactive Selection for Primary & Lower Matches */}
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center gap-2">
+                            <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                              Matched Internal Projects ({msg.resultData.matchedProjects.length} Matches Found)
+                            </h3>
+                          </div>
+                          <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
+                            💡 Select any match to view its tailored details &amp; blueprint
+                          </span>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {msg.resultData.implementationRoadmap.map((step, idx) => (
-                            <div
-                              key={idx}
-                              className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1"
-                            >
-                              <div className="flex items-center justify-between text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-bold">
-                                <span>{step.timeline}</span>
-                                <span className="text-slate-400 text-[10px]">Step {idx + 1}</span>
+
+                        <div className="space-y-3">
+                          {msg.resultData.matchedProjects.map((matchItem) => {
+                            const isSelected = matchItem.asset.id === activeProjectId;
+                            return (
+                              <div
+                                key={matchItem.asset.id}
+                                onClick={() =>
+                                  setSelectedMatchByMsg((prev) => ({
+                                    ...prev,
+                                    [msg.id]: matchItem.asset.id,
+                                  }))
+                                }
+                                className={`p-4 rounded-xl border transition cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/30 shadow-sm'
+                                    : 'bg-slate-50/60 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700/60'
+                                }`}
+                              >
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-indigo-600 text-white">
+                                      {matchItem.asset.id}
+                                    </span>
+                                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                      {matchItem.asset.name}
+                                    </span>
+                                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                      {matchItem.role}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    {/* Department Badge */}
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+                                      <Building2 className="w-3 h-3 text-indigo-500" />
+                                      <span>Dept: {matchItem.asset.dept}</span>
+                                    </span>
+
+                                    {/* Match percentage badge */}
+                                    <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
+                                      {matchItem.matchPercentage}% Match
+                                    </span>
+
+                                    {/* Interactive Select Button / Active Badge */}
+                                    {isSelected ? (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-indigo-600 text-white shadow-xs">
+                                        <Check className="w-3 h-3" />
+                                        <span>Active Selection</span>
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedMatchByMsg((prev) => ({
+                                            ...prev,
+                                            [msg.id]: matchItem.asset.id,
+                                          }));
+                                        }}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                                      >
+                                        <span>Select Option</span>
+                                        <ChevronRight className="w-3 h-3 text-slate-400" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <p className="text-xs text-slate-600 dark:text-slate-300 mb-2.5">
+                                  {matchItem.fitReason}
+                                </p>
+
+                                <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-200/60 dark:border-slate-800/60 pt-2">
+                                  <span>Department: <strong>{matchItem.asset.deptFullName}</strong></span>
+                                  <span>•</span>
+                                  <span>Tech: <strong className="font-mono text-slate-700 dark:text-slate-300">{matchItem.asset.techStack}</strong></span>
+                                  <span>•</span>
+                                  <span>Effort: <strong>{matchItem.asset.implementationEffort}</strong></span>
+                                  <span>•</span>
+                                  <span>Run Cost: <strong>{matchItem.asset.estimatedRunCost}</strong></span>
+                                </div>
                               </div>
-                              <div className="text-xs font-bold text-slate-900 dark:text-white">
-                                {step.title}
-                              </div>
-                              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                                {step.description}
-                              </p>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* WHAT TO IMPLEMENT: What to Reuse vs What to Build (Dynamic for Selected Match) */}
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                              Scope &amp; Implementation Blueprint: {activeAsset.id}
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              Tailored blueprint for adopting {activeAsset.name} from department {activeAsset.dept}.
+                            </p>
+                          </div>
+                          <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 self-start sm:self-auto">
+                            {activeMatch.role} ({activeMatch.matchPercentage}%)
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* What to Reuse */}
+                          <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-500/20 space-y-2">
+                            <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              <span>What You Reuse From Dept: {activeAsset.dept}</span>
                             </div>
-                          ))}
+                            <ul className="text-xs text-slate-700 dark:text-slate-300 space-y-1.5">
+                              {activeWhatToReuse.map((item, i) => (
+                                <li key={i} className="flex items-start gap-1.5">
+                                  <span className="text-emerald-600 font-bold">•</span>
+                                  <span>{item}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* What to Build */}
+                          <div className="p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-500/20 space-y-2">
+                            <div className="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                              <Sparkles className="w-4 h-4 text-indigo-600" />
+                              <span>What Your Team Implements</span>
+                            </div>
+                            <ul className="text-xs text-slate-700 dark:text-slate-300 space-y-1.5">
+                              {activeWhatToBuild.map((item, i) => (
+                                <li key={i} className="flex items-start gap-1.5">
+                                  <span className="text-indigo-600 font-bold">•</span>
+                                  <span>{item}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        {/* 3-Step Execution Roadmap */}
+                        <div className="pt-2">
+                          <div className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2.5">
+                            Game Plan for {activeAsset.id}:
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {activeRoadmap.map((step, idx) => (
+                              <div
+                                key={idx}
+                                className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1"
+                              >
+                                <div className="flex items-center justify-between text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-bold">
+                                  <span>{step.timeline}</span>
+                                  <span className="text-slate-400 text-[10px]">Step {idx + 1}</span>
+                                </div>
+                                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                                  {step.title}
+                                </div>
+                                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                                  {step.description}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           ))}
 

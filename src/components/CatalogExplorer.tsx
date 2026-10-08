@@ -21,11 +21,18 @@ export const CatalogExplorer: React.FC<Props> = ({ assets }) => {
   const [selectedDept, setSelectedDept] = useState<string>('ALL');
 
   const filteredAssets = assets.filter((asset) => {
+    const q = searchTerm.toLowerCase().trim();
+    if (!q) return selectedDept === 'ALL' || asset.dept === selectedDept;
+
     const matchesSearch =
-      asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.domain.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.dept.toLowerCase().includes(searchTerm.toLowerCase());
+      asset.name.toLowerCase().includes(q) ||
+      asset.id.toLowerCase().includes(q) ||
+      asset.domain.toLowerCase().includes(q) ||
+      asset.dept.toLowerCase().includes(q) ||
+      asset.deptFullName.toLowerCase().includes(q) ||
+      asset.techStack.toLowerCase().includes(q) ||
+      asset.modality.toLowerCase().includes(q) ||
+      asset.reusability.toLowerCase().includes(q);
 
     const matchesDept = selectedDept === 'ALL' || asset.dept === selectedDept;
 
@@ -50,15 +57,50 @@ export const CatalogExplorer: React.FC<Props> = ({ assets }) => {
             </p>
           </div>
 
-          <div className="relative w-full md:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by project name, tech, domain..."
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-            />
+          <div className="w-full md:w-80 space-y-1.5">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by name, IP, latency, tech, domain..."
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-2.5 text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {/* Quick search suggestions */}
+            <div className="flex flex-wrap items-center gap-1 text-[10px]">
+              <span className="text-slate-400">Quick:</span>
+              {[
+                { label: 'Device Latency', query: 'latency' },
+                { label: 'Link Failover', query: 'failover' },
+                { label: 'Teams/Email', query: 'teams' },
+                { label: 'Cloud VPC', query: 'vpc' },
+                { label: 'Firewall', query: 'firewall' },
+                { label: 'PRM Quotas', query: 'quota' },
+              ].map((tag) => (
+                <button
+                  key={tag.label}
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm(tag.query);
+                    setSelectedDept('ALL');
+                  }}
+                  className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-900/40 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-mono transition cursor-pointer"
+                >
+                  {tag.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

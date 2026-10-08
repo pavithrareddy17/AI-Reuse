@@ -1,7 +1,7 @@
 export interface InternalAsset {
   id: string;
   name: string;
-  dept: 'HCS' | 'IAS' | 'SEC' | 'PRM' | 'OPM' | 'HOS' | 'FIN' | 'SCM' | 'DAT' | 'CXM' | string;
+  dept: 'HCS' | 'IAS' | 'SEC' | 'NRE' | 'PRM' | 'OPM' | 'HOS' | 'SRE' | 'DAT' | 'FIN' | string;
   deptFullName: string;
   domain: string;
   techStack: string;
@@ -22,6 +22,11 @@ export interface MatchedProjectResult {
   role: 'Primary Match' | 'Alternative Match' | 'Complementary Asset';
   fitReason: string;
   reusableFeatures: string[];
+  kpis?: RealisticKPIs;
+  whatToReuse?: string[];
+  whatToBuild?: string[];
+  implementationRoadmap?: ImplementationPlanItem[];
+  architectureRationale?: string;
 }
 
 export interface RealisticKPIs {

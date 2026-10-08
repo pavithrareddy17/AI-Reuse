@@ -7,12 +7,10 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar.tsx';
 import { DiscoveryChatbot } from './components/DiscoveryChatbot.tsx';
 import { CatalogExplorer } from './components/CatalogExplorer.tsx';
-import { ArchitectureView } from './components/ArchitectureView.tsx';
 import { ALL_INTERNAL_PROJECTS } from './data/groundTruth.ts';
 
 export default function App() {
-  const [activeView, setActiveView] = useState<'chat' | 'catalog' | 'architecture'>('chat');
-  const [hasApiKey, setHasApiKey] = useState<boolean>(true);
+  const [activeView, setActiveView] = useState<'chat' | 'catalog'>('chat');
 
   // Theme Management (Light vs Dark)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -38,20 +36,6 @@ export default function App() {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  // Check backend health and API key link status
-  useEffect(() => {
-    fetch('/api/health')
-      .then((res) => res.json())
-      .then((data) => {
-        if (typeof data.hasGeminiKey === 'boolean') {
-          setHasApiKey(data.hasGeminiKey);
-        }
-      })
-      .catch((err) => {
-        console.warn('Health check error:', err);
-      });
-  }, []);
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors">
       {/* Top Navigation */}
@@ -61,14 +45,12 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         totalProjectsCount={ALL_INTERNAL_PROJECTS.length}
-        hasApiKey={hasApiKey}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {activeView === 'chat' && <DiscoveryChatbot />}
         {activeView === 'catalog' && <CatalogExplorer assets={ALL_INTERNAL_PROJECTS} />}
-        {activeView === 'architecture' && <ArchitectureView />}
       </main>
 
       {/* Clean Footer */}
@@ -76,28 +58,28 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>AI Solution Discovery &amp; Reuse Engine • 10 Enterprise Divisions</span>
+            <span>Project Discovery &amp; Reuse Engine • 10 Enterprise Divisions</span>
           </div>
-          <div className="flex items-center gap-3 text-[11px] font-mono text-slate-400">
-            <span>HCS</span>
+          <div className="flex items-center gap-2.5 text-[11px] font-mono text-slate-400">
+            <span>HCS (Network)</span>
             <span>•</span>
-            <span>IAS</span>
+            <span>IAS (IaaS)</span>
             <span>•</span>
-            <span>SEC</span>
+            <span>SEC (Security)</span>
             <span>•</span>
-            <span>PRM</span>
+            <span>NRE (Reliability)</span>
             <span>•</span>
-            <span>OPM</span>
+            <span>PRM (Platform)</span>
             <span>•</span>
-            <span>HOS</span>
+            <span>OPM (Operations)</span>
             <span>•</span>
-            <span>FIN</span>
+            <span>HOS (Hosting)</span>
             <span>•</span>
-            <span>SCM</span>
+            <span>SRE</span>
             <span>•</span>
             <span>DAT</span>
             <span>•</span>
-            <span>CXM</span>
+            <span>FIN</span>
           </div>
         </div>
       </footer>
