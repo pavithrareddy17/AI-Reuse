@@ -7,10 +7,11 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar.tsx';
 import { DiscoveryChatbot } from './components/DiscoveryChatbot.tsx';
 import { CatalogExplorer } from './components/CatalogExplorer.tsx';
+import { ArchitectureView } from './components/ArchitectureView.tsx';
 import { ALL_INTERNAL_PROJECTS } from './data/groundTruth.ts';
 
 export default function App() {
-  const [activeView, setActiveView] = useState<'chat' | 'catalog'>('chat');
+  const [activeView, setActiveView] = useState<'chat' | 'catalog' | 'architecture'>('chat');
   const [hasApiKey, setHasApiKey] = useState<boolean>(true);
 
   // Theme Management (Light vs Dark)
@@ -67,6 +68,7 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {activeView === 'chat' && <DiscoveryChatbot />}
         {activeView === 'catalog' && <CatalogExplorer assets={ALL_INTERNAL_PROJECTS} />}
+        {activeView === 'architecture' && <ArchitectureView />}
       </main>
 
       {/* Clean Footer */}

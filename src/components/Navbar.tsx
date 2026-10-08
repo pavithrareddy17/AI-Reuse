@@ -6,11 +6,12 @@ import {
   Moon,
   Cpu,
   Sparkles,
+  Layers,
 } from 'lucide-react';
 
 interface Props {
-  activeView: 'chat' | 'catalog';
-  setActiveView: (view: 'chat' | 'catalog') => void;
+  activeView: 'chat' | 'catalog' | 'architecture';
+  setActiveView: (view: 'chat' | 'catalog' | 'architecture') => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   totalProjectsCount: number;
@@ -50,12 +51,12 @@ export const Navbar: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Focused 2 Tabs (Merged Match + Decision Tree into Chatbot) */}
+        {/* Navigation Tabs (Decision Chat + Catalog + Architecture) */}
         <nav className="flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
           <button
             type="button"
             onClick={() => setActiveView('chat')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
               activeView === 'chat'
                 ? 'bg-white dark:bg-indigo-600 text-slate-900 dark:text-white shadow-sm font-semibold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -68,7 +69,7 @@ export const Navbar: React.FC<Props> = ({
           <button
             type="button"
             onClick={() => setActiveView('catalog')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
               activeView === 'catalog'
                 ? 'bg-white dark:bg-indigo-600 text-slate-900 dark:text-white shadow-sm font-semibold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -76,6 +77,19 @@ export const Navbar: React.FC<Props> = ({
           >
             <Building2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>Department Projects ({totalProjectsCount})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveView('architecture')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
+              activeView === 'architecture'
+                ? 'bg-white dark:bg-indigo-600 text-slate-900 dark:text-white shadow-sm font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>Architecture Diagram</span>
           </button>
         </nav>
 
