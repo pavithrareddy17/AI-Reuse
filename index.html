@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Solution Discovery &amp; Reuse Intelligence Engine</title>
+    <meta name="description" content="Enterprise AI solution discovery engine that matches business problems with internal assets, evaluates trade-offs, and prescribes target architectures." />
+    <meta property="og:title" content="AI Solution Discovery &amp; Reuse Intelligence Engine" />
+    <meta property="og:description" content="Enterprise AI solution discovery engine that matches business problems with internal assets, evaluates trade-offs, and prescribes target architectures." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // Suppress Vite dev server HMR websocket errors in iframe environments as per environment constraints
+      window.addEventListener('unhandledrejection', (event) => {
+        if (event.reason && (event.reason.message?.includes('WebSocket') || event.reason.toString().includes('WebSocket'))) {
+          event.preventDefault();
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

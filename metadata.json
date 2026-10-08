@@ -1,0 +1,6 @@
+{
+  "name": "AI Solution Discovery & Reuse Intelligence Engine",
+  "description": "Enterprise AI solution discovery engine that matches business problems with internal assets, evaluates trade-offs, and prescribes target architectures.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
